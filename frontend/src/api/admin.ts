@@ -9,6 +9,7 @@ export interface AdminUserItem {
   avatar: string | null
   role: string
   status: string
+  is_verified: boolean
   created_at: string
 }
 

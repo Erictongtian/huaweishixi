@@ -35,6 +35,7 @@
           <h2 class="login-title">欢迎回来</h2>
           <p class="login-subtitle">登录你的账号继续使用</p>
           <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleLogin">
+
             <el-form-item label="用户名" prop="username">
               <el-input v-model="form.username" placeholder="请输入用户名" size="large" data-testid="input-username">
                 <template #prefix>
@@ -100,6 +101,7 @@ async function handleLogin() {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (e: any) {
+
     ElMessage.error(e.message || '登录失败')
   } finally {
     loading.value = false
@@ -247,6 +249,7 @@ async function handleLogin() {
   color: var(--color-muted-foreground);
   margin: 0 0 32px;
 }
+
 
 .login-btn {
   width: 100%;

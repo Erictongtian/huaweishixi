@@ -40,8 +40,10 @@ async def seed():
             username="admin",
             password_hash=hash_password("Admin123456"),
             nickname="系统管理员",
+            email="admin@system.local",
             role="admin",
             status="active",
+            is_verified=True,
             fail_count=0,
         )
         session.add(admin)

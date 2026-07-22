@@ -29,6 +29,7 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+
       path: '/',
       component: () => import('../layouts/MainLayout.vue'),
       children: [

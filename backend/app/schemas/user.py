@@ -56,6 +56,7 @@ class AdminUserItem(BaseModel):
     avatar: str | None = None
     role: str
     status: str
+    is_verified: bool = False
     created_at: str
 
     model_config = {"from_attributes": True}

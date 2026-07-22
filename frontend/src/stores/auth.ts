@@ -30,7 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function register(data: RegisterData) {
-    await registerApi(data)
+    const resp = await registerApi(data)
+    return resp.data.data
   }
 
   async function fetchCurrentUser() {

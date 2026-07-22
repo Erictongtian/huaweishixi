@@ -11,6 +11,14 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: list[str] = ["jpg", "jpeg", "png", "gif", "webp"]
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    SMTP_HOST: str = "smtp.qq.com"
+    SMTP_PORT: int = 465
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_SSL: bool = True
+    FRONTEND_URL: str = "http://localhost:5173"
+    VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

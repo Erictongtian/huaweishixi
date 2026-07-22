@@ -1,3 +1,5 @@
+import random
+import string
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -13,24 +15,82 @@ from app.core.security import (
 )
 from app.core.exceptions import BusinessException, ConflictException, NotFoundException, PermissionException
 from app.models.user import User
+from app.models.email_code import EmailCode
 from app.schemas.auth import (
     LoginRequest,
     RefreshTokenResponse,
     RegisterRequest,
+    RegisterResponse,
+    SendCodeRequest,
     TokenResponse,
     UserResponse,
 )
+from app.services.email_service import send_verification_code
 
 
-async def register(db: AsyncSession, req: RegisterRequest) -> UserResponse:
+async def send_register_code(db: AsyncSession, req: SendCodeRequest) -> str:
+    result = await db.execute(select(User).where(User.email == req.email))
+    if result.scalar_one_or_none():
+        raise ConflictException("该邮箱已被注册")
+
+    now = datetime.utcnow()
+    recent = await db.execute(
+        select(EmailCode)
+        .where(EmailCode.email == req.email, EmailCode.created_at > now - timedelta(seconds=60))
+        .order_by(EmailCode.created_at.desc())
+    )
+    if recent.scalar_one_or_none():
+        raise BusinessException("发送过于频繁，请60秒后再试")
+
+    code = "".join(random.choices(string.digits, k=6))
+    email_code = EmailCode(
+        email=req.email,
+        code=code,
+        expires_at=now + timedelta(minutes=5),
+    )
+    db.add(email_code)
+    await db.flush()
+
+    try:
+        await send_verification_code(req.email, code)
+    except Exception:
+        raise BusinessException("邮件发送失败，请检查邮箱地址或稍后重试")
+
+    return "验证码已发送"
+
+
+async def register(db: AsyncSession, req: RegisterRequest) -> RegisterResponse:
     result = await db.execute(select(User).where(User.username == req.username))
     if result.scalar_one_or_none():
         raise ConflictException("用户名已存在")
 
-    if req.email:
-        result = await db.execute(select(User).where(User.email == req.email))
-        if result.scalar_one_or_none():
-            raise ConflictException("邮箱已被注册")
+    result = await db.execute(select(User).where(User.email == req.email))
+    if result.scalar_one_or_none():
+        raise ConflictException("邮箱已被注册")
+
+    now = datetime.utcnow()
+    code_result = await db.execute(
+        select(EmailCode)
+        .where(EmailCode.email == req.email, EmailCode.used == False, EmailCode.expires_at > now)
+        .order_by(EmailCode.created_at.desc())
+    )
+    email_code = code_result.scalar_one_or_none()
+
+    if email_code is None:
+        raise BusinessException("验证码已过期，请重新获取")
+
+    if email_code.fail_count >= 5:
+        email_code.used = True
+        await db.flush()
+        raise BusinessException("验证码错误次数过多，请重新获取")
+
+    if email_code.code != req.email_code:
+        email_code.fail_count += 1
+        await db.flush()
+        raise BusinessException("验证码错误")
+
+    email_code.used = True
+    await db.flush()
 
     user = User(
         username=req.username,
@@ -38,10 +98,12 @@ async def register(db: AsyncSession, req: RegisterRequest) -> UserResponse:
         nickname=req.nickname,
         email=req.email,
         phone=req.phone,
+        is_verified=True,
     )
     db.add(user)
     await db.flush()
-    return UserResponse.model_validate(user)
+
+    return RegisterResponse(message="注册成功", email=req.email)
 
 
 async def authenticate(db: AsyncSession, req: LoginRequest) -> TokenResponse:
@@ -58,6 +120,7 @@ async def authenticate(db: AsyncSession, req: LoginRequest) -> TokenResponse:
 
     if user.status == "locked" and user.locked_until is None:
         raise PermissionException("账号已被封禁")
+
 
     if user.status == "locked" and user.locked_until and user.locked_until > now:
         remaining = int((user.locked_until - now).total_seconds() / 60)

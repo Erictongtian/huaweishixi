@@ -37,26 +37,38 @@
           </template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" min-width="80" />
-        <el-table-column prop="role" label="角色" width="100">
+        <el-table-column prop="email" label="邮箱" min-width="220">
+          <template #default="{ row }">
+            <span class="mono-text email-text">{{ row.email || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="is_verified" label="验证" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.is_verified ? 'success' : 'warning'" size="small" effect="dark" round>
+              {{ row.is_verified ? '已验证' : '未验证' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="role" label="角色" width="80">
           <template #default="{ row }">
             <el-tag :type="row.role === 'admin' ? 'danger' : ''" size="small" effect="dark" round>
               {{ row.role === 'admin' ? '管理员' : '用户' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small" effect="dark" round>
               {{ statusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="注册时间" width="170">
+        <el-table-column prop="created_at" label="注册时间" width="160">
           <template #default="{ row }">
             <span class="mono-text">{{ formatDate(row.created_at) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <template v-if="row.role !== 'admin'">
               <el-button v-if="row.status === 'active'" type="warning" link size="small" @click="handleBan(row)">封禁</el-button>
@@ -312,6 +324,10 @@ async function handlePwdSubmit() {
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--color-muted-foreground);
+}
+
+.email-text {
+  white-space: nowrap;
 }
 
 .no-action {

@@ -9,7 +9,8 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     nickname: str
-    email: str | None = None
+    email: str
+    email_code: str
     phone: str | None = None
 
     @field_validator("username")
@@ -37,6 +38,17 @@ class RegisterRequest(BaseModel):
             raise ValueError("昵称最长50个字符")
         return v.strip()
 
+    @field_validator("email_code")
+    @classmethod
+    def validate_email_code(cls, v: str) -> str:
+        if not v or len(v) != 6:
+            raise ValueError("验证码为6位数字")
+        return v
+
+
+class SendCodeRequest(BaseModel):
+    email: str
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -51,9 +63,20 @@ class UserResponse(BaseModel):
     phone: str | None = None
     role: str
     avatar: str | None = None
+    is_verified: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+
+
+class VerifyResponse(BaseModel):
+    message: str
+
 
 
 class TokenResponse(BaseModel):

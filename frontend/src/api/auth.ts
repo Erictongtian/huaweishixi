@@ -9,8 +9,14 @@ export interface RegisterData {
   username: string
   password: string
   nickname: string
-  email?: string
+  email: string
+  email_code: string
   phone?: string
+}
+
+export interface RegisterResult {
+  message: string
+  email: string
 }
 
 export interface UserInfo {
@@ -21,6 +27,7 @@ export interface UserInfo {
   phone: string | null
   role: string
   avatar: string | null
+  is_verified: boolean
   created_at: string
 }
 
@@ -37,7 +44,11 @@ export function login(data: LoginData) {
 }
 
 export function register(data: RegisterData) {
-  return request.post<{ code: number; message: string; data: UserInfo }>('/auth/register', data)
+  return request.post<{ code: number; message: string; data: RegisterResult }>('/auth/register', data)
+}
+
+export function sendRegisterCode(email: string) {
+  return request.post<{ code: number; message: string; data: { message: string } }>('/auth/send-register-code', { email })
 }
 
 export function refreshToken(token: string) {

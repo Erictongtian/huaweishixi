@@ -64,7 +64,7 @@
               </el-input>
             </el-form-item>
             <div class="optional-row">
-              <el-form-item label="邮箱（选填）" prop="email" class="optional-item">
+              <el-form-item label="邮箱" prop="email" class="optional-item">
                 <el-input v-model="form.email" placeholder="请输入邮箱" size="large" data-testid="input-email">
                   <template #prefix>
                     <el-icon><Message /></el-icon>
@@ -79,6 +79,18 @@
                 </el-input>
               </el-form-item>
             </div>
+            <el-form-item label="验证码" prop="email_code">
+              <div class="code-row">
+                <el-input v-model="form.email_code" placeholder="请输入6位验证码" size="large" maxlength="6" data-testid="input-email-code">
+                  <template #prefix>
+                    <el-icon><Key /></el-icon>
+                  </template>
+                </el-input>
+                <el-button type="primary" size="large" :loading="codeLoading" :disabled="codeCooldown > 0" class="code-btn" @click="handleSendCode">
+                  {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
+                </el-button>
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" :loading="loading" class="register-btn" size="large" data-testid="btn-register" @click="handleRegister">
                 注册
@@ -95,18 +107,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Avatar, Lock, Message, Phone } from '@element-plus/icons-vue'
+import { User, Avatar, Lock, Message, Phone, Key } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
+import { sendRegisterCode } from '../../api/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const codeLoading = ref(false)
+const codeCooldown = ref(0)
+let cooldownTimer: ReturnType<typeof setInterval> | null = null
+
+onUnmounted(() => {
+  if (cooldownTimer) clearInterval(cooldownTimer)
+})
 
 const form = reactive({
   username: '',
@@ -114,6 +134,7 @@ const form = reactive({
   password: '',
   confirmPassword: '',
   email: '',
+  email_code: '',
   phone: '',
 })
 
@@ -145,11 +166,45 @@ const rules: FormRules = {
     { validator: validateConfirmPassword, trigger: 'blur' },
   ],
   email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
+  ],
+  email_code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码为6位数字', trigger: 'blur' },
   ],
   phone: [
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' },
   ],
+}
+
+async function handleSendCode() {
+  if (!form.email) {
+    ElMessage.warning('请先输入邮箱')
+    return
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.email)) {
+    ElMessage.warning('请输入正确的邮箱格式')
+    return
+  }
+  codeLoading.value = true
+  try {
+    await sendRegisterCode(form.email)
+    ElMessage.success('验证码已发送')
+    codeCooldown.value = 60
+    cooldownTimer = setInterval(() => {
+      codeCooldown.value--
+      if (codeCooldown.value <= 0 && cooldownTimer) {
+        clearInterval(cooldownTimer)
+        cooldownTimer = null
+      }
+    }, 1000)
+  } catch (e: any) {
+    ElMessage.error(e.message || '发送失败')
+  } finally {
+    codeLoading.value = false
+  }
 }
 
 async function handleRegister() {
@@ -158,14 +213,15 @@ async function handleRegister() {
 
   loading.value = true
   try {
-    await authStore.register({
+    const res = await authStore.register({
       username: form.username,
       nickname: form.nickname,
       password: form.password,
-      email: form.email || undefined,
+      email: form.email,
+      email_code: form.email_code,
       phone: form.phone || undefined,
     })
-    ElMessage.success('注册成功，请登录')
+    ElMessage.success(res.message || '注册成功')
     router.push('/login')
   } catch (e: any) {
     ElMessage.error(e.message || '注册失败')
@@ -325,6 +381,24 @@ async function handleRegister() {
 
 .optional-item {
   flex: 1;
+}
+
+.code-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.code-row .el-input {
+  flex: 1;
+}
+
+.code-btn {
+  flex-shrink: 0;
+  width: 120px;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .register-btn {

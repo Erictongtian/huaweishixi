@@ -53,6 +53,7 @@ async def list_users(
             "avatar": u.avatar,
             "role": u.role,
             "status": u.status,
+            "is_verified": u.is_verified,
             "created_at": u.created_at.isoformat() if u.created_at else None,
         })
 

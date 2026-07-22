@@ -11,8 +11,11 @@ from app.schemas.auth import (
     LoginRequest,
     RefreshTokenResponse,
     RegisterRequest,
+    RegisterResponse,
+    SendCodeRequest,
     TokenResponse,
     UserResponse,
+    VerifyResponse,
 )
 from app.schemas.base import ResponseBase
 from app.services.auth_service import (
@@ -20,16 +23,23 @@ from app.services.auth_service import (
     get_current_user_info,
     refresh_access_token,
     register,
+    send_register_code,
 )
 
 router = APIRouter()
 security_scheme = HTTPBearer()
 
 
-@router.post("/register", response_model=ResponseBase[UserResponse], status_code=201)
+@router.post("/send-register-code", response_model=ResponseBase[VerifyResponse])
+async def send_code(req: SendCodeRequest, db: AsyncSession = Depends(get_db)):
+    message = await send_register_code(db, req)
+    return ResponseBase(data=VerifyResponse(message=message))
+
+
+@router.post("/register", response_model=ResponseBase[RegisterResponse], status_code=201)
 async def register_user(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    user = await register(db, req)
-    return ResponseBase(data=user)
+    result = await register(db, req)
+    return ResponseBase(data=result)
 
 
 @router.post("/login", response_model=ResponseBase[TokenResponse])
