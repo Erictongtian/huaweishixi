@@ -71,7 +71,7 @@
             </div>
           </div>
           <div class="seller-card">
-            <el-avatar :size="40" class="seller-avatar">{{ device.seller?.nickname?.charAt(0) }}</el-avatar>
+            <el-avatar :size="40" :src="device.seller?.avatar || undefined" class="seller-avatar">{{ device.seller?.nickname?.charAt(0) }}</el-avatar>
             <div class="seller-meta">
               <span class="seller-name">{{ device.seller?.nickname }}</span>
               <span class="seller-label">卖家</span>
