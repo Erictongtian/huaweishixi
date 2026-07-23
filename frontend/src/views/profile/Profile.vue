@@ -107,7 +107,12 @@ const changingPwd = ref(false)
 const uploadingAvatar = ref(false)
 const avatarInput = ref<HTMLInputElement>()
 
-const avatarPreview = computed(() => form.avatar || authStore.user?.avatar || '')
+const avatarRemoved = ref(false)
+
+const avatarPreview = computed(() => {
+  if (avatarRemoved.value) return form.avatar || ''
+  return form.avatar || authStore.user?.avatar || ''
+})
 
 const form = reactive({
   nickname: authStore.user?.nickname || '',
@@ -135,6 +140,7 @@ function cancelEdit() {
   form.phone = authStore.user?.phone || ''
   form.email = authStore.user?.email || ''
   form.avatar = authStore.user?.avatar || ''
+  avatarRemoved.value = false
   editing.value = false
 }
 
@@ -144,6 +150,7 @@ function triggerAvatarUpload() {
 
 function removeAvatar() {
   form.avatar = ''
+  avatarRemoved.value = true
 }
 
 async function onAvatarChange(e: Event) {
@@ -159,6 +166,7 @@ async function onAvatarChange(e: Event) {
   try {
     const resp = await uploadFile(file)
     form.avatar = resp.data.data.url
+    avatarRemoved.value = false
   } catch (err: any) {
     ElMessage.error(err.message || '上传失败')
   } finally {
